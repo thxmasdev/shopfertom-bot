@@ -58,11 +58,17 @@ export default {
             let newChannelName;
             let originalPrice = 'precio-desconocido';
 
-            // Verificar si es un canal de subasta
+            // Verificar si es un canal de subasta (formato 【💲offer】minecraft)
+            const isOfferChannel = currentName.includes('【💲offer】');
             const auction = await getAuctionByChannelId(channel.id);
-            if (auction) {
+            
+            if (isOfferChannel || auction) {
                 newChannelName = `【💲SOLD】minecraft`;
-                originalPrice = `$${auction.starting_price} (subasta)`;
+                if (auction) {
+                    originalPrice = `$${auction.starting_price} (subasta)`;
+                } else {
+                    originalPrice = 'Subasta (precio variable)';
+                }
             } else {
                 // Extraer precio del nombre del canal con el nuevo formato 【💲precio】minecraft
                 const priceMatch = currentName.match(/【💲(\d+(?:\.\d+)?)】/);

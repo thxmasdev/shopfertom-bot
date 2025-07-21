@@ -257,29 +257,36 @@ export default {
                     const category = guild.channels.cache.get(salesCategoryId);
 
                     if (category && category.type === ChannelType.GuildCategory) {
-                        // Nombre del canal basado en el precio mínimo
-                        const channelName = `【💲${precioMinimo.toFixed(0)}】minecraft`;
+                        // Nombre del canal para ofertas
+                        const channelName = `【💲offer】minecraft`;
 
-                        // Buscar posición correcta basada en el precio
+                        // Buscar posición correcta - las ofertas van al final después de todos los precios
                         const existingChannels = category.children.cache
                             .filter(channel => channel.type === ChannelType.GuildText)
                             .sort((a, b) => {
-                                // Extraer precio del nuevo formato 【💲precio】minecraft
+                                // Extraer precio del formato 【💲precio】minecraft o identificar ofertas
                                 const priceMatchA = a.name.match(/【💲(\d+(?:\.\d+)?)】/);
                                 const priceMatchB = b.name.match(/【💲(\d+(?:\.\d+)?)】/);
+                                const isOfferA = a.name.includes('【💲offer】');
+                                const isOfferB = b.name.includes('【💲offer】');
+                                
+                                // Si ambos son ofertas, mantener orden de creación
+                                if (isOfferA && isOfferB) return 0;
+                                // Las ofertas van después de los precios
+                                if (isOfferA && !isOfferB) return 1;
+                                if (!isOfferA && isOfferB) return -1;
+                                
+                                // Para canales con precio, orden descendente
                                 const priceA = priceMatchA ? parseFloat(priceMatchA[1]) : 0;
                                 const priceB = priceMatchB ? parseFloat(priceMatchB[1]) : 0;
-                                return priceB - priceA; // Orden descendente
+                                return priceB - priceA;
                             });
 
+                        // Encontrar la posición después de todos los canales con precio
                         let position = 0;
-                        const currentPrice = parseFloat(precioMinimo.toFixed(0));
-                        
                         for (const channel of existingChannels.values()) {
-                            // Extraer precio del nuevo formato 【💲precio】minecraft
-                            const priceMatch = channel.name.match(/【💲(\d+(?:\.\d+)?)】/);
-                            const channelPrice = priceMatch ? parseFloat(priceMatch[1]) : 0;
-                            if (currentPrice > channelPrice) {
+                            const isOffer = channel.name.includes('【💲offer】');
+                            if (isOffer) {
                                 break;
                             }
                             position++;
