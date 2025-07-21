@@ -61,19 +61,27 @@ export default {
             // Verificar si es un canal de subasta
             const auction = await getAuctionByChannelId(channel.id);
             if (auction) {
-                newChannelName = `sold-offer-${auction.starting_price}`;
-                originalPrice = `${auction.starting_price} (subasta)`;
+                newChannelName = `【💲SOLD】minecraft`;
+                originalPrice = `$${auction.starting_price} (subasta)`;
             } else {
-                // Extraer precio del nombre del canal si es posible
-                const priceMatch = currentName.match(/^(\d+(?:\.\d+)?)/); // Busca precio al inicio
+                // Extraer precio del nombre del canal con el nuevo formato 【💲precio】minecraft
+                const priceMatch = currentName.match(/【💲(\d+(?:\.\d+)?)】/);
                 if (priceMatch) {
                     const price = priceMatch[1];
-                    newChannelName = `sold-${price}`;
+                    newChannelName = `【💲SOLD】minecraft`;
                     originalPrice = `$${price}`;
                 } else {
-                    // Si no se puede extraer precio, usar nombre genérico
-                    newChannelName = `sold-${currentName}`;
-                    originalPrice = 'Precio no especificado';
+                    // Fallback para formato antiguo
+                    const oldPriceMatch = currentName.match(/^(\d+(?:\.\d+)?)/); 
+                    if (oldPriceMatch) {
+                        const price = oldPriceMatch[1];
+                        newChannelName = `【💲SOLD】minecraft`;
+                        originalPrice = `$${price}`;
+                    } else {
+                        // Si no se puede extraer precio, usar nombre genérico
+                        newChannelName = `【💲SOLD】minecraft`;
+                        originalPrice = 'Precio no especificado';
+                    }
                 }
             }
 

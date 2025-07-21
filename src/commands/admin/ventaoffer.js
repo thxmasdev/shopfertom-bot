@@ -257,14 +257,40 @@ export default {
                     const category = guild.channels.cache.get(salesCategoryId);
 
                     if (category && category.type === ChannelType.GuildCategory) {
-                        // Nombre del canal basado en el rango de precios
-                        const channelName = `offer-minecraft-${precioMinimo.toFixed(0)}-${precioMaximo.toFixed(0)}`;
+                        // Nombre del canal basado en el precio mínimo
+                        const channelName = `【💲${precioMinimo.toFixed(0)}】minecraft`;
+
+                        // Buscar posición correcta basada en el precio
+                        const existingChannels = category.children.cache
+                            .filter(channel => channel.type === ChannelType.GuildText)
+                            .sort((a, b) => {
+                                // Extraer precio del nuevo formato 【💲precio】minecraft
+                                const priceMatchA = a.name.match(/【💲(\d+(?:\.\d+)?)】/);
+                                const priceMatchB = b.name.match(/【💲(\d+(?:\.\d+)?)】/);
+                                const priceA = priceMatchA ? parseFloat(priceMatchA[1]) : 0;
+                                const priceB = priceMatchB ? parseFloat(priceMatchB[1]) : 0;
+                                return priceB - priceA; // Orden descendente
+                            });
+
+                        let position = 0;
+                        const currentPrice = parseFloat(precioMinimo.toFixed(0));
+                        
+                        for (const channel of existingChannels.values()) {
+                            // Extraer precio del nuevo formato 【💲precio】minecraft
+                            const priceMatch = channel.name.match(/【💲(\d+(?:\.\d+)?)】/);
+                            const channelPrice = priceMatch ? parseFloat(priceMatch[1]) : 0;
+                            if (currentPrice > channelPrice) {
+                                break;
+                            }
+                            position++;
+                        }
 
                         // Crear el canal con permisos restrictivos
                         newChannel = await guild.channels.create({
                             name: channelName,
                             type: ChannelType.GuildText,
                             parent: category,
+                            position: position,
                             topic: `Subasta de cuenta Minecraft - $${precioMinimo.toFixed(2)} - $${precioMaximo.toFixed(2)} USD`,
                             permissionOverwrites: [
                                 {
@@ -295,14 +321,25 @@ export default {
                 }
             }
 
-            // Enviar los embeds por separado
-            const channelToSend = newChannel || interaction.channel;
+            // Combinar todos los botones en una sola fila
+            const allButtons = [];
             
-            // Enviar embed de cuenta con botones
-            const accountComponents = accountButtonRow ? [accountButtonRow] : [];
-            const accountMessage = await channelToSend.send({
-                embeds: [accountEmbed],
-                components: accountComponents
+            // Agregar botón de ofertar primero
+            allButtons.push(offerButton);
+            
+            // Agregar botones de cuenta
+            if (accountButtons.length > 0) {
+                allButtons.push(...accountButtons);
+            }
+            
+            // Crear fila de botones combinada
+            const combinedButtonRow = new ActionRowBuilder().addComponents(allButtons);
+            
+            // Enviar todo en un solo mensaje con ambos embeds
+            const channelToSend = newChannel || interaction.channel;
+            const sentMessage = await channelToSend.send({
+                embeds: [accountEmbed, offerEmbed],
+                components: [combinedButtonRow]
             });
             
             // Guardar datos de la galería si hay múltiples imágenes
@@ -311,21 +348,15 @@ export default {
                 global.galleryData.set(galleryId, {
                     mediaUrls: mediaUrls,
                     createdBy: interaction.user.id,
-                    messageId: accountMessage.id
+                    messageId: sentMessage.id
                 });
             }
-            
-            // Enviar embed de ofertas con botón de ofertar
-            const sentMessage = await channelToSend.send({
-                embeds: [offerEmbed],
-                components: [offerButtonRow]
-            });
 
             // Guardar datos en la base de datos
             const auctionId = await createAuction({
                 channelId: channelToSend.id,
                 messageId: sentMessage.id,
-                accountEmbedId: accountMessage.id,
+                accountEmbedId: sentMessage.id,
                 offerEmbedId: sentMessage.id,
                 minPrice: precioMinimo,
                 maxPrice: precioMaximo,
@@ -557,64 +588,34 @@ export const handleGalleryButton = async (interaction) => {
             });
         }
 
-        // Verificar que el usuario que creó la subasta pueda ver la galería
-        if (galleryData.createdBy !== interaction.user.id && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-            return await interaction.reply({
-                content: '❌ Solo el creador de la subasta puede ver la galería completa.',
-                ephemeral: true
-            });
-        }
+        // Permitir que cualquier persona pueda ver la galería
+        // Comentado para permitir acceso público a la galería
+        // if (galleryData.createdBy !== interaction.user.id && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        //     return await interaction.reply({
+        //         content: '❌ Solo el creador de la subasta puede ver la galería completa.',
+        //         ephemeral: true
+        //     });
+        // }
 
-        // Enviar cada URL directamente para que Discord las renderice automáticamente
-        const maxUrlsPerMessage = 5; // Límite para evitar spam
-        let isFirstMessage = true;
+        // Enviar todas las URLs en un solo mensaje
+        const urlsText = galleryData.mediaUrls.map((url, index) => {
+            return `**${index + 1}.** ${url}`;
+        }).join('\n\n');
         
-        for (let i = 0; i < galleryData.mediaUrls.length; i += maxUrlsPerMessage) {
-            const urlBatch = galleryData.mediaUrls.slice(i, i + maxUrlsPerMessage);
-            const urlsText = urlBatch.map((url, index) => {
-                const globalIndex = i + index + 1;
-                return `**${globalIndex}.** ${url}`;
-            }).join('\n\n');
-            
-            const isLastBatch = i + maxUrlsPerMessage >= galleryData.mediaUrls.length;
-            let messageContent = urlsText;
-            let components = [];
-            
-            // Agregar información de la galería solo en el primer mensaje
-            if (isFirstMessage) {
-                messageContent = `🖼️ **Galería de Medios** (${galleryData.mediaUrls.length} elementos)\n\n${urlsText}`;
-                isFirstMessage = false;
-            }
-            
-            // Agregar botón de cerrar solo en el último mensaje
-            if (isLastBatch) {
-                const closeButton = new ButtonBuilder()
-                    .setCustomId(`close_gallery_ventaoffer_${interaction.user.id}`)
-                    .setLabel('❌ Cerrar Galería')
-                    .setStyle(ButtonStyle.Danger);
-                const buttonRow = new ActionRowBuilder().addComponents(closeButton);
-                components = [buttonRow];
-            }
-            
-            if (i === 0) {
-                await interaction.reply({
-                    content: messageContent,
-                    components: components,
-                    ephemeral: true
-                });
-            } else {
-                await interaction.followUp({
-                    content: messageContent,
-                    components: components,
-                    ephemeral: true
-                });
-            }
-            
-            // Pequeña pausa para evitar rate limiting
-            if (i + maxUrlsPerMessage < galleryData.mediaUrls.length) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-        }
+        const messageContent = `🖼️ **Galería de Medios** (${galleryData.mediaUrls.length} elementos)\n\n${urlsText}`;
+        
+        // Agregar botón de cerrar
+        const closeButton = new ButtonBuilder()
+            .setCustomId(`close_gallery_ventaoffer_${interaction.user.id}`)
+            .setLabel('❌ Cerrar Galería')
+            .setStyle(ButtonStyle.Danger);
+        const buttonRow = new ActionRowBuilder().addComponents(closeButton);
+        
+        await interaction.reply({
+            content: messageContent,
+            components: [buttonRow],
+            ephemeral: true
+        });
 
     } catch (error) {
         console.error('Error en handleGalleryButton:', error);

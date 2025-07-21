@@ -219,15 +219,18 @@ export default {
                     const category = guild.channels.cache.get(salesCategoryId);
 
                     if (category && category.type === ChannelType.GuildCategory) {
-                        // Nombre del canal basado en el precio
-                        const channelName = `${precio}-minecraft`;
+                         // Nombre del canal basado en el precio
+                        const channelName = `【💲${precio}】minecraft`;
 
                         // Buscar posición correcta basada en el precio
                         const existingChannels = category.children.cache
                             .filter(channel => channel.type === ChannelType.GuildText)
                             .sort((a, b) => {
-                                const priceA = parseFloat(a.name.split('-')[0]) || 0;
-                                const priceB = parseFloat(b.name.split('-')[0]) || 0;
+                                // Extraer precio del nuevo formato 【💲precio】minecraft
+                                const priceMatchA = a.name.match(/【💲(\d+(?:\.\d+)?)】/);
+                                const priceMatchB = b.name.match(/【💲(\d+(?:\.\d+)?)】/);
+                                const priceA = priceMatchA ? parseFloat(priceMatchA[1]) : 0;
+                                const priceB = priceMatchB ? parseFloat(priceMatchB[1]) : 0;
                                 return priceB - priceA; // Orden descendente
                             });
 
@@ -235,7 +238,9 @@ export default {
                         const currentPrice = parseFloat(precio);
                         
                         for (const channel of existingChannels.values()) {
-                            const channelPrice = parseFloat(channel.name.split('-')[0]) || 0;
+                            // Extraer precio del nuevo formato 【💲precio】minecraft
+                            const priceMatch = channel.name.match(/【💲(\d+(?:\.\d+)?)】/);
+                            const channelPrice = priceMatch ? parseFloat(priceMatch[1]) : 0;
                             if (currentPrice > channelPrice) {
                                 break;
                             }
@@ -334,13 +339,14 @@ export const handleGalleryButton = async (interaction) => {
             });
         }
 
-        // Verificar que el usuario que creó la venta pueda ver la galería
-        if (galleryData.createdBy !== interaction.user.id && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-            return await interaction.reply({
-                content: '❌ Solo el creador de la venta puede ver la galería completa.',
-                ephemeral: true
-            });
-        }
+        // Permitir que cualquier persona pueda ver la galería
+        // Comentado para permitir acceso público a la galería
+        // if (galleryData.createdBy !== interaction.user.id && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        //     return await interaction.reply({
+        //         content: '❌ Solo el creador de la venta puede ver la galería completa.',
+        //         ephemeral: true
+        //     });
+        // }
 
         // Crear botón para cerrar la galería
         const closeButton = new ButtonBuilder()
@@ -350,33 +356,18 @@ export const handleGalleryButton = async (interaction) => {
 
         const buttonRow = new ActionRowBuilder().addComponents(closeButton);
 
-        // Enviar mensaje inicial con información de la galería
+        // Enviar todas las URLs en un solo mensaje
+        const urlsText = galleryData.mediaUrls.map((url, index) => {
+            return `**${index + 1}.** ${url}`;
+        }).join('\n\n');
+        
+        const messageContent = `🖼️ **Galería de Medios** (${galleryData.mediaUrls.length} elementos)\n\n${urlsText}`;
+        
         await interaction.reply({
-            content: `🖼️ **Galería de Medios** (${galleryData.mediaUrls.length} elementos)\n\n*Las imágenes, videos y GIFs se mostrarán a continuación en alta calidad:*`,
+            content: messageContent,
             components: [buttonRow],
             ephemeral: true
         });
-
-        // Enviar cada URL directamente para que Discord las renderice automáticamente
-        const maxUrlsPerMessage = 5; // Límite para evitar spam
-        
-        for (let i = 0; i < galleryData.mediaUrls.length; i += maxUrlsPerMessage) {
-            const urlBatch = galleryData.mediaUrls.slice(i, i + maxUrlsPerMessage);
-            const urlsText = urlBatch.map((url, index) => {
-                const globalIndex = i + index + 1;
-                return `**${globalIndex}.** ${url}`;
-            }).join('\n\n');
-            
-            await interaction.followUp({
-                content: urlsText,
-                ephemeral: true
-            });
-            
-            // Pequeña pausa para evitar rate limiting
-            if (i + maxUrlsPerMessage < galleryData.mediaUrls.length) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-        }
 
     } catch (error) {
         console.error('Error en handleGalleryButton:', error);
