@@ -328,25 +328,19 @@ export default {
                 }
             }
 
-            // Combinar todos los botones en una sola fila
-            const allButtons = [];
-            
-            // Agregar botón de ofertar primero
-            allButtons.push(offerButton);
-            
-            // Agregar botones de cuenta
-            if (accountButtons.length > 0) {
-                allButtons.push(...accountButtons);
-            }
-            
-            // Crear fila de botones combinada
-            const combinedButtonRow = new ActionRowBuilder().addComponents(allButtons);
-            
-            // Enviar todo en un solo mensaje con ambos embeds
+            // Enviar mensajes separados
             const channelToSend = newChannel || interaction.channel;
+            
+            // Enviar embed de cuenta con sus botones (NameMC y galería)
+            const accountMessage = await channelToSend.send({
+                embeds: [accountEmbed],
+                components: accountButtonRow ? [accountButtonRow] : []
+            });
+            
+            // Enviar embed de subasta con botón de ofertar
             const sentMessage = await channelToSend.send({
-                embeds: [accountEmbed, offerEmbed],
-                components: [combinedButtonRow]
+                embeds: [offerEmbed],
+                components: [offerButtonRow]
             });
             
             // Guardar datos de la galería si hay múltiples imágenes
@@ -355,7 +349,7 @@ export default {
                 global.galleryData.set(galleryId, {
                     mediaUrls: mediaUrls,
                     createdBy: interaction.user.id,
-                    messageId: sentMessage.id
+                    messageId: accountMessage.id
                 });
             }
 
