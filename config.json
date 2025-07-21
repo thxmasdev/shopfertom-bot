@@ -1,0 +1,35 @@
+{
+  "prefix": "!",
+  "embedColor": "#0099ff",
+  "botName": "ShopFertom Bot",
+  "version": "1.0.0",
+  "description": "Bot de Discord para ShopFertom",
+  "supportServer": "https://discord.gg/tu-servidor",
+  "website": "https://tu-sitio-web.com",
+  "developers": [
+    "615360256922484757"
+  ],
+  "permissions": {
+    "required": [
+      "ViewChannel",
+      "SendMessages",
+      "UseSlashCommands",
+      "EmbedLinks",
+      "AttachFiles",
+      "ReadMessageHistory"
+    ]
+  },
+  "emojis": {
+        "verify": "1396759035247722558",
+    "hypixel": "1396689719152218193",
+    "minecraft": "1396754899295015034",
+    "cosmetics": "1396757463427973120",
+    "rank": "1396757985690255442",
+    "payment": "1396757643913068585",
+    "gallery": "",
+    "seller": "1396758374732927076",
+    "verified": "",
+    "premium": "",
+    "shop": ""
+  }
+}
