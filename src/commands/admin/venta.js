@@ -314,10 +314,17 @@ export default {
             console.error('Error en el comando venta:', error);
             
             try {
-                await interaction.editReply({
-                    content: '❌ Ocurrió un error al procesar la venta.',
-                    ephemeral: true
-                });
+                if (interaction.deferred && !interaction.replied) {
+                    await interaction.editReply({
+                        content: '❌ Ocurrió un error al procesar la venta.',
+                        ephemeral: true
+                    });
+                } else if (!interaction.replied) {
+                    await interaction.reply({
+                        content: '❌ Ocurrió un error al procesar la venta.',
+                        ephemeral: true
+                    });
+                }
             } catch (replyError) {
                 console.error('Error al enviar respuesta de error:', replyError);
             }
@@ -371,10 +378,16 @@ export const handleGalleryButton = async (interaction) => {
 
     } catch (error) {
         console.error('Error en handleGalleryButton:', error);
-        await interaction.reply({
-            content: '❌ Error al mostrar la galería.',
-            ephemeral: true
-        });
+        try {
+            if (!interaction.replied) {
+                await interaction.reply({
+                    content: '❌ Error al mostrar la galería.',
+                    ephemeral: true
+                });
+            }
+        } catch (replyError) {
+            console.error('Error al enviar respuesta de error:', replyError);
+        }
     }
 };
 

@@ -199,26 +199,6 @@ export default {
             })
             .setTimestamp();
 
-            // Crear embed de ofertas
-            const offerEmoji = getEmoji('offer', '💰');
-            const offerEmbed = new EmbedBuilder()
-                .setColor(0xFF6B35)
-                .setTitle(`${offerEmoji} Sistema de Ofertas`)
-                .setDescription(`**💵 Rango de ofertas:** $${precioMinimo.toFixed(2)} - $${precioMaximo.toFixed(2)} USD\n\n🔥 **Oferta actual:** Ninguna\n👤 **Mejor postor:** Nadie aún\n\n⚡ **¡Haz tu oferta ahora!**`)
-                .addFields(
-                    {
-                        name: '📋 Reglas de la subasta',
-                        value: '• Solo puedes ofertar una vez hasta que alguien más oferte\n• La oferta debe estar entre el mínimo y máximo\n• No puedes retirar tu oferta una vez hecha\n• Si haces una oferta de manera que no cumpliras es motivo de ban',
-                        inline: false
-                    }
-                )
-                .setFooter({ text: '💡 Usa el botón "Hacer Oferta" para participar' });
-
-            // Crear botones separados
-            const offerButton = new ButtonBuilder()
-                .setCustomId('make_offer')
-                .setLabel('💰 Hacer Oferta')
-                .setStyle(ButtonStyle.Primary);
 
             // Crear botones para el embed de cuenta
             const accountButtons = [];
@@ -240,6 +220,27 @@ export default {
                     .setStyle(ButtonStyle.Success);
                 accountButtons.push(galleryButton);
             }
+
+                        // Crear embed de ofertas
+            const offerEmoji = getEmoji('offer', '💰');
+            const offerEmbed = new EmbedBuilder()
+                .setColor(0xFF6B35)
+                .setTitle(`${offerEmoji} Sistema de Ofertas`)
+                .setDescription(`**💵 Rango de ofertas:** $${precioMinimo.toFixed(2)} - $${precioMaximo.toFixed(2)} USD\n\n🔥 **Oferta actual:** Ninguna\n👤 **Mejor postor:** Nadie aún\n\n⚡ **¡Haz tu oferta ahora!**`)
+                .addFields(
+                    {
+                        name: '📋 Reglas de la subasta',
+                        value: '• Solo puedes ofertar una vez hasta que alguien más oferte\n• La oferta debe estar entre el mínimo y máximo\n• No puedes retirar tu oferta una vez hecha\n• Si haces una oferta de manera que no cumpliras es motivo de ban',
+                        inline: false
+                    }
+                )
+                .setFooter({ text: '💡 Usa el botón "Hacer Oferta" para participar' });
+
+            // Crear botones separados
+            const offerButton = new ButtonBuilder()
+                .setCustomId('make_offer')
+                .setLabel('💰 Hacer Oferta')
+                .setStyle(ButtonStyle.Primary);
 
             // Fila de botones para el embed de ofertas (solo botón de ofertar)
             const offerButtonRow = new ActionRowBuilder().addComponents(offerButton);
@@ -394,10 +395,17 @@ export default {
             console.error('Error en el comando ventaoffer:', error);
             
             try {
-                await interaction.editReply({
-                    content: '❌ Ocurrió un error al procesar la subasta.',
-                    ephemeral: true
-                });
+                if (interaction.deferred && !interaction.replied) {
+                    await interaction.editReply({
+                        content: '❌ Ocurrió un error al procesar la subasta.',
+                        ephemeral: true
+                    });
+                } else if (!interaction.replied) {
+                    await interaction.reply({
+                        content: '❌ Ocurrió un error al procesar la subasta.',
+                        ephemeral: true
+                    });
+                }
             } catch (replyError) {
                 console.error('Error al enviar respuesta de error:', replyError);
             }
@@ -448,10 +456,16 @@ export const handleOfferButton = async (interaction) => {
 
     } catch (error) {
         console.error('Error en handleOfferButton:', error);
-        await interaction.reply({
-            content: '❌ Error al procesar la oferta.',
-            ephemeral: true
-        });
+        try {
+            if (!interaction.replied) {
+                await interaction.reply({
+                    content: '❌ Error al procesar la oferta.',
+                    ephemeral: true
+                });
+            }
+        } catch (replyError) {
+            console.error('Error al enviar respuesta de error:', replyError);
+        }
     }
 };
 
@@ -568,10 +582,16 @@ export const handleOfferModal = async (interaction) => {
 
     } catch (error) {
         console.error('Error en handleOfferModal:', error);
-        await interaction.reply({
-            content: '❌ Error al procesar la oferta.',
-            ephemeral: true
-        });
+        try {
+            if (!interaction.replied) {
+                await interaction.reply({
+                    content: '❌ Error al procesar la oferta.',
+                    ephemeral: true
+                });
+            }
+        } catch (replyError) {
+            console.error('Error al enviar respuesta de error:', replyError);
+        }
     }
 };
 
@@ -620,10 +640,16 @@ export const handleGalleryButton = async (interaction) => {
 
     } catch (error) {
         console.error('Error en handleGalleryButton:', error);
-        await interaction.reply({
-            content: '❌ Error al mostrar la galería.',
-            ephemeral: true
-        });
+        try {
+            if (!interaction.replied) {
+                await interaction.reply({
+                    content: '❌ Error al mostrar la galería.',
+                    ephemeral: true
+                });
+            }
+        } catch (replyError) {
+            console.error('Error al enviar respuesta de error:', replyError);
+        }
     }
 };
 
