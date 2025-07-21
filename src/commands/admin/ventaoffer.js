@@ -18,6 +18,8 @@ function getEmoji(emojiName, fallback = '🔹') {
     return fallback;
 }
 
+
+
 export default {
     data: new SlashCommandBuilder()
         .setName('ventaoffer')
@@ -46,6 +48,11 @@ export default {
         .addStringOption(option =>
             option.setName('rank')
                 .setDescription('Ranks de servidores (ejemplo: Hypixel: MVP+, UniversoCraft: Jupiter)')
+                .setRequired(false)
+                .setMaxLength(500))
+        .addStringOption(option =>
+            option.setName('capes')
+                .setDescription('Capas de Minecraft (ejemplo: 🔥 Minecon 2016, ⚡ Migrator)')
                 .setRequired(false)
                 .setMaxLength(500))
         .addStringOption(option =>
@@ -79,6 +86,7 @@ export default {
             const precioMaximo = parseFloat(interaction.options.getString('precio_maximo'));
             const cosmeticos = interaction.options.getString('lunar_cosmetics') || '';
             const ranks = interaction.options.getString('rank') || '';
+            const capes = interaction.options.getString('capes') || '';
             const metodosPago = interaction.options.getString('metodos') || '';
             const fotos = interaction.options.getString('imagenes') || '';
 
@@ -103,6 +111,7 @@ export default {
             // Agregar información básica con emojis personalizados
             const cosmeticsEmoji = getEmoji('cosmetics', '✨');
             const rankEmoji = getEmoji('rank', '🏆');
+            const capesEmoji = getEmoji('capes', '👘');
             const paymentEmoji = getEmoji('payment', '💳');
             
             if (nick) {
@@ -125,6 +134,14 @@ export default {
                 accountEmbed.addFields({
                     name: `${rankEmoji} Ranks`,
                     value: `\`${ranks.replace(/,\s*/g, ',\n')}\``,
+                    inline: false
+                });
+            }
+
+            if (capes) {
+                accountEmbed.addFields({
+                    name: `${capesEmoji} Capas`,
+                    value: capes,
                     inline: false
                 });
             }

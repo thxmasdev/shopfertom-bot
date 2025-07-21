@@ -43,6 +43,11 @@ export default {
                 .setRequired(false)
                 .setMaxLength(500))
         .addStringOption(option =>
+            option.setName('capes')
+                .setDescription('Capas de Minecraft (ejemplo: 🔥 Minecon 2016, ⚡ Migrator)')
+                .setRequired(false)
+                .setMaxLength(500))
+        .addStringOption(option =>
             option.setName('metodos')
                 .setDescription('Métodos de pago aceptados')
                 .setRequired(false)
@@ -72,6 +77,7 @@ export default {
             const precio = interaction.options.getString('precio') || '';
             const cosmeticos = interaction.options.getString('lunar_cosmetics') || '';
             const ranks = interaction.options.getString('rank') || '';
+            const capes = interaction.options.getString('capes') || '';
             const metodosPago = interaction.options.getString('metodos') || '';
             const fotos = interaction.options.getString('imagenes') || '';
 
@@ -87,6 +93,7 @@ export default {
             // Agregar información básica con emojis personalizados
             const cosmeticsEmoji = getEmoji('cosmetics', '✨');
             const rankEmoji = getEmoji('rank', '🏆');
+            const capesEmoji = getEmoji('capes', '👘');
             const paymentEmoji = getEmoji('payment', '💳');
             
             if (nick) {
@@ -109,6 +116,14 @@ export default {
                 embed.addFields({
                     name: `${rankEmoji} Ranks`,
                     value: `\`${ranks.replace(/,\s*/g, ',\n')}\``,
+                    inline: false
+                });
+            }
+
+            if (capes) {
+                embed.addFields({
+                    name: `${capesEmoji} Capas`,
+                    value: capes,
                     inline: false
                 });
             }
@@ -327,9 +342,23 @@ export const handleGalleryButton = async (interaction) => {
             });
         }
 
+        // Crear botón para cerrar la galería
+        const closeButton = new ButtonBuilder()
+            .setCustomId(`close_gallery_venta_${interaction.user.id}`)
+            .setLabel('❌ Cerrar Galería')
+            .setStyle(ButtonStyle.Danger);
+
+        const buttonRow = new ActionRowBuilder().addComponents(closeButton);
+
+        // Enviar mensaje inicial con información de la galería
+        await interaction.reply({
+            content: `🖼️ **Galería de Medios** (${galleryData.mediaUrls.length} elementos)\n\n*Las imágenes, videos y GIFs se mostrarán a continuación en alta calidad:*`,
+            components: [buttonRow],
+            ephemeral: true
+        });
+
         // Enviar cada URL directamente para que Discord las renderice automáticamente
         const maxUrlsPerMessage = 5; // Límite para evitar spam
-        let isFirstMessage = true;
         
         for (let i = 0; i < galleryData.mediaUrls.length; i += maxUrlsPerMessage) {
             const urlBatch = galleryData.mediaUrls.slice(i, i + maxUrlsPerMessage);
@@ -338,39 +367,10 @@ export const handleGalleryButton = async (interaction) => {
                 return `**${globalIndex}.** ${url}`;
             }).join('\n\n');
             
-            const isLastBatch = i + maxUrlsPerMessage >= galleryData.mediaUrls.length;
-            let messageContent = urlsText;
-            let components = [];
-            
-            // Agregar información de la galería solo en el primer mensaje
-            if (isFirstMessage) {
-                messageContent = `🖼️ **Galería de Medios** (${galleryData.mediaUrls.length} elementos)\n\n${urlsText}`;
-                isFirstMessage = false;
-            }
-            
-            // Agregar botón de cerrar solo en el último mensaje
-            if (isLastBatch) {
-                const closeButton = new ButtonBuilder()
-                    .setCustomId(`close_gallery_venta_${interaction.user.id}`)
-                    .setLabel('❌ Cerrar Galería')
-                    .setStyle(ButtonStyle.Danger);
-                const buttonRow = new ActionRowBuilder().addComponents(closeButton);
-                components = [buttonRow];
-            }
-            
-            if (i === 0) {
-                await interaction.reply({
-                    content: messageContent,
-                    components: components,
-                    ephemeral: true
-                });
-            } else {
-                await interaction.followUp({
-                    content: messageContent,
-                    components: components,
-                    ephemeral: true
-                });
-            }
+            await interaction.followUp({
+                content: urlsText,
+                ephemeral: true
+            });
             
             // Pequeña pausa para evitar rate limiting
             if (i + maxUrlsPerMessage < galleryData.mediaUrls.length) {
